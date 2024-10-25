@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 # Request Body Model for FastAPI
 class QueryPriceRequest(BaseModel):
     plateNumber: str
@@ -14,4 +15,3 @@ class QueryPriceRequest(BaseModel):
     homePhone2: str
     email: str
     confirmEmail: str
-

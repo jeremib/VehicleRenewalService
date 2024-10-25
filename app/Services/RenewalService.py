@@ -9,11 +9,10 @@ from Models.CompleteTransactionRequest import CompleteTransactionRequest
 import time
 
 
-
 class RenewalService:
 
     def __init__(self, form_data: QueryPriceRequest | CompleteTransactionRequest):
-        
+
         options = Options()
         options.add_argument("--headless")  # Add this line to enable headless mode
         options.add_argument("--no-sandbox")  # Optional: For environments like Docker
@@ -21,10 +20,7 @@ class RenewalService:
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
         self.driver = webdriver.Chrome(options=options)
-        
-        
-        
-        
+
         self.form_data = form_data
 
     def wait_for_element(self, locator, timeout=10):
@@ -33,8 +29,7 @@ class RenewalService:
 
     def fill_form_page(self):
         """Fill out the form with name, address, city, state, etc."""
-        
-        
+
         try:
             form_fields = {
                 "name": self.form_data.name,
@@ -49,36 +44,34 @@ class RenewalService:
             }
 
             for field, value in form_fields.items():
-                if field=='zip':
+                if field == 'zip':
                     try:
-                        
+
                         zip_element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "#zip"))
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "#zip"))
                         )
-                    
+
                         # Once the name element is found, send the name to the input field
                         zip_element.send_keys(value)
                         time.sleep(2)
                     except Exception as e:
-                        
-                        time.sleep(2)  
+
+                        time.sleep(2)
                 else:
                     element = self.wait_for_element((By.CSS_SELECTOR, f"#{field}"))
                     element.send_keys(value)
-                
-                
 
             confirm_email = self.wait_for_element((By.CSS_SELECTOR, "#confirmemail"))
             confirm_email.send_keys(self.form_data.email)
-            
+
             self.submit_form()
-            
+
         except Exception as e:
             pass
 
     def submit_form(self):
         """Submit the form and handle validation errors."""
-        
+
         try:
             submit_button = self.driver.find_element(By.ID, "payrenewal_None")
             self.driver.execute_script("arguments[0].click();", submit_button)
@@ -86,7 +79,7 @@ class RenewalService:
 
             try:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
-                
+
                 self.retry_form_submission()
             except:
                 pass
@@ -102,7 +95,6 @@ class RenewalService:
         except Exception as e:
             pass
 
-
     def handle_alert(self):
         """Check for and handle an alert."""
         try:
@@ -116,11 +108,11 @@ class RenewalService:
 
     def search_plate_number(self):
         """Enter the plate number and proceed."""
-        plate_input = self.wait_for_element((By.CSS_SELECTOR, 
-            "input[name='plateNumber']"))
+        plate_input = self.wait_for_element((By.CSS_SELECTOR,
+                                             "input[name='plateNumber']"))
         plate_input.send_keys(self.form_data.plateNumber)
-        
-        self.driver.execute_script("document.expressRenew.submit();")        
+
+        self.driver.execute_script("document.expressRenew.submit();")
         return self.handle_alert()
 
     def county_selection_element(self):
@@ -169,25 +161,25 @@ class RenewalService:
             self.driver.switch_to.default_content()
             iframe = self.wait_for_element((By.CSS_SELECTOR, "#iframe"))
             self.driver.switch_to.frame(iframe)
-            
+
             account_input = self.wait_for_element((By.ID, "payment-account"))
             account_input.send_keys(self.form_data.account)
-            
+
             self.select_dropdown_option("#payment-expmonth-label > select", self.form_data.exp_month)
             self.select_dropdown_option("#payment-expyear-label > select", self.form_data.exp_year)
-            
+
             cv_input = self.wait_for_element((By.CSS_SELECTOR, "#payment-cv-label > input[type=text]"))
             cv_input.send_keys(self.form_data.cv)
-            
+
             submit_button = self.wait_for_element((By.CSS_SELECTOR, "#payment-submit-button"))
             submit_button.click()
-            alert_text=self.handle_alert()
-            
+            alert_text = self.handle_alert()
+
             if "Failed" in alert_text:
                 return False
-            return  True # Return fee summary after payment
+            return True  # Return fee summary after payment
         except Exception as e:
-            
+
             return None
         finally:
             self.driver.switch_to.default_content()
@@ -200,7 +192,7 @@ class RenewalService:
                 return "street_number_page"
             return "form_page"
         except Exception as e:
-            
+
             return None
 
     def select_dropdown_option(self, selector, option_value):
@@ -214,14 +206,12 @@ class RenewalService:
             street_input = self.wait_for_element((By.CSS_SELECTOR, "#streetnum"))
             street_num = self.form_data.addressTwo.split(" ")[0]
             street_input.send_keys(street_num)
-            
-            
+
             plate_input = self.driver.find_element(By.CSS_SELECTOR, "#plateFields > div > input[name='platenum']")
             plate_input.send_keys(self.form_data.plateNumber)
 
             search_button = self.driver.find_element(By.ID, "Searchbutton")
             self.driver.execute_script("arguments[0].click();", search_button)
-            
 
             # Collect additional form information
             self.collect_form_data()
