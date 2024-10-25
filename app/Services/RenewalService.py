@@ -81,7 +81,7 @@ class RenewalService:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
 
                 self.retry_form_submission()
-            except:
+            except Exception as e:
                 pass
         except Exception as e:
             pass
@@ -103,7 +103,7 @@ class RenewalService:
             alert_text = alert.text
             alert.accept()
             return alert_text
-        except:
+        except Exception as e:
             return None
 
     def search_plate_number(self):

@@ -17,7 +17,7 @@ async def query_price(request: QueryPriceRequest):
     alert_text = renewal_service.search_plate_number()
 
     if renewal_service.driver.current_url == renewal_service_url:
-        raise HTTPException(status_code=400, detail=f"{alert_text} Plate Number is not correct")
+        raise HTTPException(status_code=400, detail=f"{alert_text}")
 
     current_page = renewal_service.check_current_page()
 
