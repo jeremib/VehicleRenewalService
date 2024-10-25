@@ -15,10 +15,3 @@ class QueryPriceRequest(BaseModel):
     email: str
     confirmEmail: str
 
-class CompleteTransactionRequest(QueryPriceRequest):
-    account: str
-    exp_month: str
-    exp_year: str
-    cv: str
-
-# FastAPI Routes

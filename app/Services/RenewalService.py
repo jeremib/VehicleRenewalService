@@ -4,20 +4,22 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.chrome.options import Options
-from Models.models import CompleteTransactionRequest
+from Models.QueryPriceRequest import QueryPriceRequest
+from Models.CompleteTransactionRequest import CompleteTransactionRequest
 import time
 
 
 
 class RenewalService:
 
-    def __init__(self, form_data:CompleteTransactionRequest):
+    def __init__(self, form_data: QueryPriceRequest | CompleteTransactionRequest):
         
         options = Options()
         options.add_argument("--headless")  # Add this line to enable headless mode
         options.add_argument("--no-sandbox")  # Optional: For environments like Docker
         options.add_argument("--disable-dev-shm-usage")  # Optional: Prevents memory issues in headless mode
-
+        prefs = {"profile.managed_default_content_settings.images": 2}
+        options.add_experimental_option("prefs", prefs)
         self.driver = webdriver.Chrome(options=options)
         
         
@@ -59,7 +61,7 @@ class RenewalService:
                         time.sleep(2)
                     except Exception as e:
                         
-                        time.sleep  
+                        time.sleep(2)  
                 else:
                     element = self.wait_for_element((By.CSS_SELECTOR, f"#{field}"))
                     element.send_keys(value)

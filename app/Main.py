@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from Models.models import QueryPriceRequest, CompleteTransactionRequest
+from Models.QueryPriceRequest import QueryPriceRequest
+from Models.CompleteTransactionRequest import CompleteTransactionRequest
 from Services.RenewalService import RenewalService
 import os
 
@@ -47,7 +48,7 @@ async def complete_transaction(request: CompleteTransactionRequest):
     alert_text = renewal_service.search_plate_number()
     
     if renewal_service.driver.current_url==renewal_service_url:
-        raise HTTPException(status_code=400, detail=f"{alert_text} Plate Number is not correct")
+        raise HTTPException(status_code=400, detail=f"{alert_text}")
     
 
     current_page = renewal_service.check_current_page()
