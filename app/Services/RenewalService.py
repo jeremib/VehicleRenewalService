@@ -55,11 +55,15 @@ class RenewalService:
                         zip_element.send_keys(value)
                         time.sleep(2)
                     except Exception as e:
-
+                        
                         time.sleep(2)
                 else:
-                    element = self.wait_for_element((By.CSS_SELECTOR, f"#{field}"))
-                    element.send_keys(value)
+                    try:
+                        
+                        element = self.wait_for_element((By.CSS_SELECTOR, f"#{field}"))
+                        element.send_keys(value)
+                    except Exception as e:
+                       pass
 
             confirm_email = self.wait_for_element((By.CSS_SELECTOR, "#confirmemail"))
             confirm_email.send_keys(self.form_data.email)
@@ -67,6 +71,7 @@ class RenewalService:
             self.submit_form()
 
         except Exception as e:
+            
             pass
 
     def submit_form(self):
@@ -82,8 +87,10 @@ class RenewalService:
 
                 self.retry_form_submission()
             except Exception as e:
+              
                 pass
         except Exception as e:
+           
             pass
 
     def retry_form_submission(self):
@@ -132,11 +139,18 @@ class RenewalService:
         """Scrape form data after successful submission."""
         try:
             fee_summary = {
+                "County": self.get_element_text_or_default(".row > .col-md-2:nth-child(2) div:nth-child(2)"),
+                "License": self.get_element_text_or_default(".row > .col-md-2:nth-child(3) div:nth-child(2)"),
+
+                "Make": self.get_element_text_or_default(".row > .col-md-2:nth-child(4) div:nth-child(2)"),
+                "Year": self.get_element_text_or_default(".row > .col-md-2:nth-child(5) div:nth-child(2)"),
+                "Exp Date": self.get_element_text_or_default(".row > .col-md-2:nth-child(6) div:nth-child(2)"),
+                
                 "Registration": self.driver.find_element(By.CSS_SELECTOR, "#Registration\\ Display").text.replace("$", ""),
-                "Online Fee": self.get_element_text_or_default("#Online\\ Fee\\ Display"),
-                "Organ Donor Amount": self.get_element_text_or_default("#Organ\\ Donor\\ Amount\\ Display"),
-                "County Wheel Tax": self.get_element_text_or_default("#County\\ Wheel\\ Tax\\ Display"),
-                "City Wheel Tax": self.get_element_text_or_default("#City\\ Wheel\\ Tax\\ Display"),
+                "Online Fee": self.get_element_text_or_default("#Online\\ Fee\\ Display").replace("$", ""),
+                "Organ Donor Amount": self.get_element_text_or_default("#Organ\\ Donor\\ Amount\\ Display").replace("$", ""),
+                "County Wheel Tax": self.get_element_text_or_default("#County\\ Wheel\\ Tax\\ Display").replace("$", ""),
+                "City Wheel Tax": self.get_element_text_or_default("#City\\ Wheel\\ Tax\\ Display").replace("$", ""),
                 "Mail Fee": self.driver.find_element(By.CSS_SELECTOR, "#Mail\\ Fee\\ Display").text.replace("$", ""),
                 "Subtotal": self.driver.find_element(By.CSS_SELECTOR, "#Subtotal\\ Display").text.replace("$", ""),
                 "Processing Fee": self.driver.find_element(By.CSS_SELECTOR, "#Processing\\ Fee\\ Display").text.replace("$", ""),
@@ -150,7 +164,7 @@ class RenewalService:
     def get_element_text_or_default(self, css_selector, default_value=""):
         """Get text of an element if it exists, otherwise return default."""
         try:
-            return self.driver.find_element(By.CSS_SELECTOR, css_selector).text.replace("$", "")
+            return self.driver.find_element(By.CSS_SELECTOR, css_selector).text
         except Exception:
             return default_value
 
