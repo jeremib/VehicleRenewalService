@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException
+from mangum import Mangum
+
 from Models.QueryPriceRequest import QueryPriceRequest
 from Models.CompleteTransactionRequest import CompleteTransactionRequest
 from Services.RenewalService import RenewalService
@@ -56,3 +58,6 @@ async def complete_transaction(request: CompleteTransactionRequest):
     if payment_process:
         return fee_summary
     raise HTTPException(status_code=400, detail="Payment processing failed")
+
+
+handler = Mangum(app)

@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -19,6 +20,15 @@ class RenewalService:
         options.add_argument("--disable-dev-shm-usage")  # Optional: Prevents memory issues in headless mode
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-client-side-phishing-detection")
+        options.add_argument("--disable-default-apps")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-sync")
+
         self.driver = webdriver.Chrome(options=options)
 
         self.form_data = form_data

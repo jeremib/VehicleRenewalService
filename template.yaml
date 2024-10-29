@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Synthro Ai Service
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  FastAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VehicleRegisterFunction
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Timeout: 120
+      MemorySize: 2048
+      ImageUri: 741448946628.dkr.ecr.us-east-1.amazonaws.com/vehicle_registration:latest
+      Environment:
+        Variables:
+          RENEWAL_SERVICE_URL: https://secure.tncountyclerk.com/index.php
+          PYTHONPATH: "/var/task/"
+      FunctionUrlConfig:
+        AuthType: NONE
+
+Outputs:
+  FastAPIFunctionUrl:
+    Description: "Function URL for FastAPI function"
+    Value: !GetAtt FastAPIFunctionUrl.FunctionUrl
+  FastAPIFunction:
+    Description: "FastAPI Lambda Function ARN"
+    Value: !GetAtt FastAPIFunction.Arn
