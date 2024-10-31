@@ -5,7 +5,6 @@ from Models.QueryPriceRequest import QueryPriceRequest
 from Models.CompleteTransactionRequest import CompleteTransactionRequest
 from Services.RenewalService import RenewalService
 import os
-
 app = FastAPI()
 renewal_service_url = os.getenv("RENEWAL_SERVICE_URL")
 
@@ -54,10 +53,7 @@ async def complete_transaction(request: CompleteTransactionRequest):
         renewal_service.fill_street_number_page()
 
     payment_process = renewal_service.handle_payment_processing()
-    fee_summary = renewal_service.collect_form_data()
-    if payment_process:
-        return fee_summary
-    raise HTTPException(status_code=400, detail="Payment processing failed")
 
-
-handler = Mangum(app)
+    if not payment_process:
+        raise HTTPException(status_code=400, detail=f"Payment processing failed")
+    return payment_process

@@ -121,7 +121,7 @@ class RenewalService:
             alert.accept()
             return alert_text
         except Exception as e:
-            return None
+            return ""
 
     def search_plate_number(self):
         """Enter the plate number and proceed."""
@@ -168,6 +168,7 @@ class RenewalService:
             }
             return fee_summary
         except Exception as e:
+            print(f"Found an exception {e}")
             pass
             return None
 
@@ -178,31 +179,56 @@ class RenewalService:
         except Exception:
             return default_value
 
+    def pop_up_in_payment_processing(self):
+                                
+        try:
+            pop_up_text=self.wait_for_element((By.CSS_SELECTOR,"#swal2-title"))
+
+            pop_ok_button=self.wait_for_element((By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled"))
+            pop_ok_button.click()
+            
+            try:
+                check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptTerms_credit"))
+
+                check_terms_condition.click()
+            except Exception as e:
+                print(f"Having error in checking terms {e}")
+            
+        except Exception as e:
+            pass
+
+
     def handle_payment_processing(self):
         """Handle payment processing within an iframe."""
 
         try:
+            fee_summary=self.collect_form_data()
             self.driver.switch_to.default_content()
+            
+            check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptTerms_credit"))
+            self.driver.execute_script("arguments[0].click();", check_terms_condition)
+            
             iframe = self.wait_for_element((By.CSS_SELECTOR, "#iframe"))
             self.driver.switch_to.frame(iframe)
 
             account_input = self.wait_for_element((By.ID, "payment-account"))
             account_input.send_keys(self.form_data.account)
-
             self.select_dropdown_option("#payment-expmonth-label > select", self.form_data.exp_month)
             self.select_dropdown_option("#payment-expyear-label > select", self.form_data.exp_year)
-
             cv_input = self.wait_for_element((By.CSS_SELECTOR, "#payment-cv-label > input[type=text]"))
             cv_input.send_keys(self.form_data.cv)
-
             submit_button = self.wait_for_element((By.CSS_SELECTOR, "#payment-submit-button"))
-            submit_button.click()
+            self.driver.execute_script("arguments[0].click();", submit_button)
+            
+            
             alert_text = self.handle_alert()
-
+           
+            print(f" Alert text found here is the alert text {alert_text}")
             if "Failed" in alert_text:
                 return False
-            return True  # Return fee summary after payment
+            return fee_summary  # Return fee summary after payment
         except Exception as e:
+            print(f"Error in Payment Process {e}")
 
             return None
         finally:
