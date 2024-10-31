@@ -121,7 +121,7 @@ class RenewalService:
             alert.accept()
             return alert_text
         except Exception as e:
-            return ""
+            return None
 
     def search_plate_number(self):
         """Enter the plate number and proceed."""
@@ -224,13 +224,11 @@ class RenewalService:
             alert_text = self.handle_alert()
            
             print(f" Alert text found here is the alert text {alert_text}")
-            if "Failed" in alert_text:
+            if alert_text and "Failed" in alert_text:
                 return False
             return fee_summary  # Return fee summary after payment
         except Exception as e:
-            print(f"Error in Payment Process {e}")
-
-            return None
+            raise f"Error in Payment Process {e}"
         finally:
             self.driver.switch_to.default_content()
 
