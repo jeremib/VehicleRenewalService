@@ -1,3 +1,4 @@
+import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -13,6 +14,8 @@ import time
 class RenewalService:
 
     def __init__(self, form_data: QueryPriceRequest | CompleteTransactionRequest):
+        logging.basicConfig(level=logging.INFO)
+        logging.info("Initializing RenewalService")
 
         options = Options()
         options.add_argument("--headless")  # Add this line to enable headless mode
@@ -34,11 +37,11 @@ class RenewalService:
         self.form_data = form_data
 
     def wait_for_element(self, locator, timeout=10):
-        """Wait for an element to be present in the DOM."""
+        logging.info(f"Waiting for element: {locator}")
         return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
 
     def fill_form_page(self):
-        """Fill out the form with name, address, city, state, etc."""
+        logging.info("Filling out the form page")
 
         try:
             form_fields = {
@@ -84,8 +87,10 @@ class RenewalService:
             
             pass
 
+        logging.info("Form page filled successfully")
+
     def submit_form(self):
-        """Submit the form and handle validation errors."""
+        logging.info("Submitting the form")
 
         try:
             submit_button = self.driver.find_element(By.ID, "payrenewal_None")
@@ -103,8 +108,11 @@ class RenewalService:
            
             pass
 
+        logging.info("Form submitted successfully")
+
     def retry_form_submission(self):
-        """Retry form submission if validation error occurs."""
+        logging.info("Retrying form submission")
+
         try:
             ok_button = self.driver.find_element(By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled")
             self.driver.execute_script("arguments[0].click();", ok_button)
@@ -112,8 +120,11 @@ class RenewalService:
         except Exception as e:
             pass
 
+        logging.info("Form submission retried successfully")
+
     def handle_alert(self):
-        """Check for and handle an alert."""
+        logging.info("Handling alert")
+
         try:
             WebDriverWait(self.driver, 5).until(EC.alert_is_present())
             alert = self.driver.switch_to.alert
@@ -123,8 +134,11 @@ class RenewalService:
         except Exception as e:
             return None
 
+        logging.info("Alert handled successfully")
+
     def search_plate_number(self):
-        """Enter the plate number and proceed."""
+        logging.info("Searching for plate number")
+
         plate_input = self.wait_for_element((By.CSS_SELECTOR,
                                              "input[name='plateNumber']"))
         plate_input.send_keys(self.form_data.plateNumber)
@@ -132,8 +146,11 @@ class RenewalService:
         self.driver.execute_script("document.expressRenew.submit();")
         return self.handle_alert()
 
+        logging.info("Plate number searched successfully")
+
     def county_selection_element(self):
-        """Handle county selection if needed."""
+        logging.info("Selecting county")
+
         try:
             select_element = Select(self.wait_for_element((By.ID, "newCountyID")))
             for option in select_element.options:
@@ -145,8 +162,11 @@ class RenewalService:
         except Exception as e:
             pass
 
+        logging.info("County selected successfully")
+
     def collect_form_data(self):
-        """Scrape form data after successful submission."""
+        logging.info("Collecting form data")
+
         try:
             fee_summary = {
                 "County": self.get_element_text_or_default(".row > .col-md-2:nth-child(2) div:nth-child(2)"),
@@ -172,14 +192,18 @@ class RenewalService:
             pass
             return None
 
+        logging.info("Form data collected successfully")
+
     def get_element_text_or_default(self, css_selector, default_value=""):
-        """Get text of an element if it exists, otherwise return default."""
+        logging.info(f"Getting text for element: {css_selector}")
+
         try:
             return self.driver.find_element(By.CSS_SELECTOR, css_selector).text
         except Exception:
             return default_value
 
     def pop_up_in_payment_processing(self):
+        logging.info("Handling pop-up in payment processing")
                                 
         try:
             pop_up_text=self.wait_for_element((By.CSS_SELECTOR,"#swal2-title"))
@@ -197,9 +221,10 @@ class RenewalService:
         except Exception as e:
             pass
 
+        logging.info("Pop-up handled successfully")
 
     def handle_payment_processing(self):
-        """Handle payment processing within an iframe."""
+        logging.info("Handling payment processing")
 
         try:
             fee_summary=self.collect_form_data()
@@ -232,8 +257,11 @@ class RenewalService:
         finally:
             self.driver.switch_to.default_content()
 
+        logging.info("Payment processed successfully")
+
     def check_current_page(self):
-        """Determine whether we are on the street number page or form page."""
+        logging.info("Checking current page")
+
         try:
             street_input = self.driver.find_elements(By.CSS_SELECTOR, "#streetnum")
             if street_input:
@@ -244,12 +272,14 @@ class RenewalService:
             return None
 
     def select_dropdown_option(self, selector, option_value):
-        """Select an option from a dropdown."""
+        logging.info(f"Selecting dropdown option: {selector} -> {option_value}")
+
         select_element = Select(self.wait_for_element((By.CSS_SELECTOR, selector)))
         select_element.select_by_visible_text(option_value)
 
     def fill_street_number_page(self):
-        """Fill out the street number page."""
+        logging.info("Filling out the street number page")
+
         try:
             street_input = self.wait_for_element((By.CSS_SELECTOR, "#streetnum"))
             street_num = self.form_data.addressTwo.split(" ")[0]
@@ -266,3 +296,5 @@ class RenewalService:
 
         except Exception as e:
             pass
+
+        logging.info("Street number page filled successfully")

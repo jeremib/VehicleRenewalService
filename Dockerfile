@@ -21,7 +21,7 @@ RUN apk update && \
 # Set environment variables for Chrome in headless mode
 ENV CHROME_BIN=/usr/bin/chromium-browser
 ENV CHROME_PATH=/usr/lib/chromium/
-ENV RENEWAL_SERVICE_URL=https://secure.tncountyclerk.com//index.php
+ENV RENEWAL_SERVICE_URL=https://secure.tncountyclerk.com//
 
 # Install Python dependencies
 COPY requirements.txt .
