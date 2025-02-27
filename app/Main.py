@@ -23,7 +23,7 @@ async def query_price(request: QueryPriceRequest):
 
         logging.info(f"Current URL: {renewal_service.driver.current_url}")
         logging.info(f"Renewal service URL: {renewal_service_url}")
-        if renewal_service.driver.current_url == renewal_service_url:
+        if renewal_service.driver.current_url == 'https://secure.tncountyclerk.com//index.php' or renewal_service.driver.current_url == renewal_service_url:
             raise HTTPException(status_code=400, detail=f"{alert_text}")
 
         current_page = renewal_service.check_current_page()
@@ -73,6 +73,7 @@ async def complete_transaction(request: CompleteTransactionRequest):
             renewal_service.fill_street_number_page()
 
         payment_process = renewal_service.handle_payment_processing()
+        
         if not payment_process:
             raise HTTPException(status_code=400, detail="Payment processing failed")
         logging.info("Transaction completed successfully")
