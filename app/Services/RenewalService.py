@@ -9,6 +9,10 @@ from selenium.webdriver.chrome.options import Options
 from Models.QueryPriceRequest import QueryPriceRequest
 from Models.CompleteTransactionRequest import CompleteTransactionRequest
 import time
+import os
+from datetime import datetime
+import random
+import string
 
 
 class RenewalService:
@@ -55,6 +59,15 @@ class RenewalService:
                 "email": self.form_data.email,
                 "zip": self.form_data.zip
             }
+            
+            try:
+                shelby_address_verify = self.driver.find_element(By.CSS_SELECTOR, "#shelby_address_verify")
+                self.driver.execute_script("arguments[0].click();", shelby_address_verify)
+                time.sleep(2)
+                form_fields["confirmEmail"] = self.form_data.email #confirm email needed on shelby address verify
+                logging.info("Shelby address verified successfully")
+            except Exception as e:
+                pass
 
             for field, value in form_fields.items():
                 if field == 'zip':
@@ -89,7 +102,7 @@ class RenewalService:
 
         logging.info("Form page filled successfully")
 
-    def submit_form(self):
+    def submit_form(self, attempt=0):
         logging.info("Submitting the form")
 
         try:
@@ -99,8 +112,12 @@ class RenewalService:
 
             try:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
-
-                self.retry_form_submission()
+                if attempt < 3:
+                    logging.info("Validation error found, retrying form submission")
+                    self.retry_form_submission(attempt)
+                else:
+                    logging.error("Max attempts reached. Form submission failed.")
+                    
             except Exception as e:
               
                 pass
@@ -110,13 +127,13 @@ class RenewalService:
 
         logging.info("Form submitted successfully")
 
-    def retry_form_submission(self):
+    def retry_form_submission(self, attempt=0):
         logging.info("Retrying form submission")
 
         try:
             ok_button = self.driver.find_element(By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled")
             self.driver.execute_script("arguments[0].click();", ok_button)
-            self.submit_form()
+            self.submit_form(attempt + 1)
         except Exception as e:
             pass
 
@@ -147,10 +164,37 @@ class RenewalService:
         return self.handle_alert()
 
         logging.info("Plate number searched successfully")
+        
+    def beginning_county_selection(self):
+        logging.info("Beginning county selection 2")
+
+        try:
+            select_element = Select(self.wait_for_element((By.CSS_SELECTOR,
+                                             "select[name='countylist']")))
+            for option in select_element.options:
+                if self.form_data.county.upper() in option.text.upper():
+                    select_element.select_by_visible_text(option.text)
+                    logging.info(f"Selected county: {option.text}")
+                    break
+        except Exception as e:
+            pass
+       
+        time.sleep(2) 
+        # should take us to the available online services, let's find the plate renewals link and click it
+        try:
+            forms = self.driver.find_elements(By.CSS_SELECTOR, "form[name^='myform']")
+            if forms:
+                plate_renewal_form = forms[0]
+                plate_renewal_form.submit()
+            # plate_renewal_link = self.wait_for_element((By.CSS_SELECTOR, "span:contains('Plate Renewals')"))
+            # plate_renewal_link.click()
+            logging.info("Clicked on Plate Renewals link")
+        except Exception as e:
+            logging.error(f"Error clicking on Plate Renewals link: {e}") 
+
 
     def county_selection_element(self):
         logging.info("Selecting county")
-
         try:
             select_element = Select(self.wait_for_element((By.ID, "newCountyID")))
             for option in select_element.options:
@@ -229,9 +273,13 @@ class RenewalService:
         try:
             fee_summary=self.collect_form_data()
             self.driver.switch_to.default_content()
+
+
             
             check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptTerms_credit"))
             self.driver.execute_script("arguments[0].click();", check_terms_condition)
+
+
             
             iframe = self.wait_for_element((By.CSS_SELECTOR, "#iframe"))
             self.driver.switch_to.frame(iframe)
@@ -239,7 +287,7 @@ class RenewalService:
             account_input = self.wait_for_element((By.ID, "payment-account"))
             account_input.send_keys(self.form_data.account)
             self.select_dropdown_option("#payment-expmonth-label > select", self.form_data.exp_month)
-            self.select_dropdown_option("#payment-expyear-label > select", self.form_data.exp_year)
+            self.select_dropdown_option("#payment-expyear-label > select", self.form_data.exp_year[-2:])
             cv_input = self.wait_for_element((By.CSS_SELECTOR, "#payment-cv-label > input[type=text]"))
             cv_input.send_keys(self.form_data.cv)
             submit_button = self.wait_for_element((By.CSS_SELECTOR, "#payment-submit-button"))
@@ -247,10 +295,11 @@ class RenewalService:
             
             
             alert_text = self.handle_alert()
-           
+            
             print(f" Alert text found here is the alert text {alert_text}")
-            if alert_text and "Failed" in alert_text:
-                return False
+            if alert_text:
+                return alert_text
+             
             return fee_summary  # Return fee summary after payment
         except Exception as e:
             raise f"Error in Payment Process {e}"
@@ -260,9 +309,11 @@ class RenewalService:
         logging.info("Payment processed successfully")
 
     def check_current_page(self):
-        logging.info("Checking current page")
-
+        logging.info(f"Checking current page: {self.driver.current_url}")
         try:
+            normalized_url = self.driver.current_url.replace('//', '/')
+            if 'renewalconfirm' in normalized_url:
+                return "successful_payment"
             street_input = self.driver.find_elements(By.CSS_SELECTOR, "#streetnum")
             if street_input:
                 return "street_number_page"
@@ -281,20 +332,46 @@ class RenewalService:
         logging.info("Filling out the street number page")
 
         try:
-            street_input = self.wait_for_element((By.CSS_SELECTOR, "#streetnum"))
-            street_num = self.form_data.addressTwo.split(" ")[0]
-            street_input.send_keys(street_num)
+            try:
+                street_input = self.wait_for_element((By.CSS_SELECTOR, "#streetnum"))
+                street_num = self.form_data.addressTwo.split(" ")[0]
+                street_input.send_keys(street_num)
+            except Exception as e:
+                logging.error(f"Street number input not found: {e}")
+                pass 
+
 
             plate_input = self.driver.find_element(By.CSS_SELECTOR, "#plateFields > div > input[name='platenum']")
             plate_input.send_keys(self.form_data.plateNumber)
 
             search_button = self.driver.find_element(By.ID, "Searchbutton")
             self.driver.execute_script("arguments[0].click();", search_button)
+            
+            alert_text = self.handle_alert()
+            
+            print(f" Alert text found here is the alert text {alert_text}")
+            if alert_text:
+                return alert_text 
 
             # Collect additional form information
-            self.collect_form_data()
+            # self.collect_form_data()
 
         except Exception as e:
             pass
 
         logging.info("Street number page filled successfully")
+        
+    def save_screenshot(self):
+        logging.info("Saving screenshot")
+        try:
+            # Create a folder based on the plate number
+            folder_path = os.path.join(os.getcwd(), f"screenshots/{self.form_data.plateNumber}")
+            os.makedirs(folder_path, exist_ok=True)
+
+            random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + random_chars
+            screenshot_path = os.path.join(folder_path, f"screenshot_{timestamp}.png")
+            self.driver.save_screenshot(screenshot_path)
+            logging.info(f"Screenshot saved at {screenshot_path}")
+        except Exception as e:
+            logging.error(f"Failed to save screenshot: {e}")
