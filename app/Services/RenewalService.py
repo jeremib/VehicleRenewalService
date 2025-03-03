@@ -19,7 +19,8 @@ class RenewalService:
 
     def __init__(self, form_data: QueryPriceRequest | CompleteTransactionRequest):
         logging.basicConfig(level=logging.INFO)
-        logging.info("Initializing RenewalService")
+        plate_info = f" [Plate: {form_data.plateNumber}]" if hasattr(form_data, 'plateNumber') else ""
+        logging.info(f"Initializing RenewalService{plate_info}")
 
         options = Options()
         options.add_argument("--headless")  # Add this line to enable headless mode
@@ -40,12 +41,16 @@ class RenewalService:
 
         self.form_data = form_data
 
+    def get_log_prefix(self):
+        """Helper method to create consistent log prefix with plate number"""
+        return f"[Plate: {self.form_data.plateNumber}]" if hasattr(self.form_data, 'plateNumber') else ""
+
     def wait_for_element(self, locator, timeout=10):
-        logging.info(f"Waiting for element: {locator}")
+        logging.info(f"{self.get_log_prefix()} Waiting for element: {locator}")
         return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
 
     def fill_form_page(self):
-        logging.info("Filling out the form page")
+        logging.info(f"{self.get_log_prefix()} Filling out the form page")
 
         try:
             form_fields = {
@@ -65,7 +70,7 @@ class RenewalService:
                 self.driver.execute_script("arguments[0].click();", shelby_address_verify)
                 time.sleep(2)
                 form_fields["confirmEmail"] = self.form_data.email #confirm email needed on shelby address verify
-                logging.info("Shelby address verified successfully")
+                logging.info(f"{self.get_log_prefix()} Shelby address verified successfully")
             except Exception as e:
                 pass
 
@@ -100,10 +105,10 @@ class RenewalService:
             
             pass
 
-        logging.info("Form page filled successfully")
+        logging.info(f"{self.get_log_prefix()} Form page filled successfully")
 
     def submit_form(self, attempt=0):
-        logging.info("Submitting the form")
+        logging.info(f"{self.get_log_prefix()} Submitting the form")
 
         try:
             submit_button = self.driver.find_element(By.ID, "payrenewal_None")
@@ -113,10 +118,10 @@ class RenewalService:
             try:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
                 if attempt < 3:
-                    logging.info("Validation error found, retrying form submission")
+                    logging.info(f"{self.get_log_prefix()} Validation error found, retrying form submission")
                     self.retry_form_submission(attempt)
                 else:
-                    logging.error("Max attempts reached. Form submission failed.")
+                    logging.error(f"{self.get_log_prefix()} Max attempts reached. Form submission failed.")
                     
             except Exception as e:
               
@@ -125,10 +130,10 @@ class RenewalService:
            
             pass
 
-        logging.info("Form submitted successfully")
+        logging.info(f"{self.get_log_prefix()} Form submitted successfully")
 
     def retry_form_submission(self, attempt=0):
-        logging.info("Retrying form submission")
+        logging.info(f"{self.get_log_prefix()} Retrying form submission")
 
         try:
             ok_button = self.driver.find_element(By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled")
@@ -137,10 +142,10 @@ class RenewalService:
         except Exception as e:
             pass
 
-        logging.info("Form submission retried successfully")
+        logging.info(f"{self.get_log_prefix()} Form submission retried successfully")
 
     def handle_alert(self):
-        logging.info("Handling alert")
+        logging.info(f"{self.get_log_prefix()} Handling alert")
 
         try:
             WebDriverWait(self.driver, 5).until(EC.alert_is_present())
@@ -151,10 +156,10 @@ class RenewalService:
         except Exception as e:
             return None
 
-        logging.info("Alert handled successfully")
+        logging.info(f"{self.get_log_prefix()} Alert handled successfully")
 
     def search_plate_number(self):
-        logging.info("Searching for plate number")
+        logging.info(f"{self.get_log_prefix()} Searching for plate number")
 
         plate_input = self.wait_for_element((By.CSS_SELECTOR,
                                              "input[name='plateNumber']"))
@@ -163,10 +168,10 @@ class RenewalService:
         self.driver.execute_script("document.expressRenew.submit();")
         return self.handle_alert()
 
-        logging.info("Plate number searched successfully")
+        logging.info(f"{self.get_log_prefix()} Plate number searched successfully")
         
     def beginning_county_selection(self):
-        logging.info("Beginning county selection 2")
+        logging.info(f"{self.get_log_prefix()} Beginning county selection 2")
 
         try:
             select_element = Select(self.wait_for_element((By.CSS_SELECTOR,
@@ -174,7 +179,7 @@ class RenewalService:
             for option in select_element.options:
                 if self.form_data.county.upper() in option.text.upper():
                     select_element.select_by_visible_text(option.text)
-                    logging.info(f"Selected county: {option.text}")
+                    logging.info(f"{self.get_log_prefix()} Selected county: {option.text}")
                     break
         except Exception as e:
             pass
@@ -188,13 +193,13 @@ class RenewalService:
                 plate_renewal_form.submit()
             # plate_renewal_link = self.wait_for_element((By.CSS_SELECTOR, "span:contains('Plate Renewals')"))
             # plate_renewal_link.click()
-            logging.info("Clicked on Plate Renewals link")
+            logging.info(f"{self.get_log_prefix()} Clicked on Plate Renewals link")
         except Exception as e:
-            logging.error(f"Error clicking on Plate Renewals link: {e}") 
+            logging.error(f"{self.get_log_prefix()} Error clicking on Plate Renewals link: {e}") 
 
 
     def county_selection_element(self):
-        logging.info("Selecting county")
+        logging.info(f"{self.get_log_prefix()} Selecting county")
         try:
             select_element = Select(self.wait_for_element((By.ID, "newCountyID")))
             for option in select_element.options:
@@ -206,10 +211,10 @@ class RenewalService:
         except Exception as e:
             pass
 
-        logging.info("County selected successfully")
+        logging.info(f"{self.get_log_prefix()} County selected successfully")
 
     def collect_form_data(self):
-        logging.info("Collecting form data")
+        logging.info(f"{self.get_log_prefix()} Collecting form data")
 
         try:
             fee_summary = {
@@ -236,10 +241,10 @@ class RenewalService:
             pass
             return None
 
-        logging.info("Form data collected successfully")
+        logging.info(f"{self.get_log_prefix()} Form data collected successfully")
 
     def get_element_text_or_default(self, css_selector, default_value=""):
-        logging.info(f"Getting text for element: {css_selector}")
+        logging.info(f"{self.get_log_prefix()} Getting text for element: {css_selector}")
 
         try:
             return self.driver.find_element(By.CSS_SELECTOR, css_selector).text
@@ -247,7 +252,7 @@ class RenewalService:
             return default_value
 
     def pop_up_in_payment_processing(self):
-        logging.info("Handling pop-up in payment processing")
+        logging.info(f"{self.get_log_prefix()} Handling pop-up in payment processing")
                                 
         try:
             pop_up_text=self.wait_for_element((By.CSS_SELECTOR,"#swal2-title"))
@@ -265,10 +270,10 @@ class RenewalService:
         except Exception as e:
             pass
 
-        logging.info("Pop-up handled successfully")
+        logging.info(f"{self.get_log_prefix()} Pop-up handled successfully")
 
     def handle_payment_processing(self):
-        logging.info("Handling payment processing")
+        logging.info(f"{self.get_log_prefix()} Handling payment processing")
 
         try:
             fee_summary=self.collect_form_data()
@@ -306,10 +311,10 @@ class RenewalService:
         finally:
             self.driver.switch_to.default_content()
 
-        logging.info("Payment processed successfully")
+        logging.info(f"{self.get_log_prefix()} Payment processed successfully")
 
     def check_current_page(self):
-        logging.info(f"Checking current page: {self.driver.current_url}")
+        logging.info(f"{self.get_log_prefix()} Checking current page: {self.driver.current_url}")
         try:
             normalized_url = self.driver.current_url.replace('//', '/')
             if 'renewalconfirm' in normalized_url:
@@ -323,13 +328,13 @@ class RenewalService:
             return None
 
     def select_dropdown_option(self, selector, option_value):
-        logging.info(f"Selecting dropdown option: {selector} -> {option_value}")
+        logging.info(f"{self.get_log_prefix()} Selecting dropdown option: {selector} -> {option_value}")
 
         select_element = Select(self.wait_for_element((By.CSS_SELECTOR, selector)))
         select_element.select_by_visible_text(option_value)
 
     def fill_street_number_page(self):
-        logging.info("Filling out the street number page")
+        logging.info(f"{self.get_log_prefix()} Filling out the street number page")
 
         try:
             try:
@@ -337,7 +342,7 @@ class RenewalService:
                 street_num = self.form_data.addressTwo.split(" ")[0]
                 street_input.send_keys(street_num)
             except Exception as e:
-                logging.error(f"Street number input not found: {e}")
+                logging.error(f"{self.get_log_prefix()} Street number input not found: {e}")
                 pass 
 
 
@@ -359,10 +364,10 @@ class RenewalService:
         except Exception as e:
             pass
 
-        logging.info("Street number page filled successfully")
+        logging.info(f"{self.get_log_prefix()} Street number page filled successfully")
         
     def save_screenshot(self):
-        logging.info("Saving screenshot")
+        logging.info(f"{self.get_log_prefix()} Saving screenshot")
         try:
             # Create a folder based on the plate number
             folder_path = os.path.join(os.getcwd(), f"screenshots/{self.form_data.plateNumber}")
@@ -372,6 +377,6 @@ class RenewalService:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + random_chars
             screenshot_path = os.path.join(folder_path, f"screenshot_{timestamp}.png")
             self.driver.save_screenshot(screenshot_path)
-            logging.info(f"Screenshot saved at {screenshot_path}")
+            logging.info(f"{self.get_log_prefix()} Screenshot saved at {screenshot_path}")
         except Exception as e:
-            logging.error(f"Failed to save screenshot: {e}")
+            logging.error(f"{self.get_log_prefix()} Failed to save screenshot: {e}")
