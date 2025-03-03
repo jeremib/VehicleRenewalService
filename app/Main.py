@@ -86,6 +86,7 @@ async def query_price(request: QueryPriceRequest):
     logging.info("Received request to query price")
     try:
         result = await run_in_thread(process_renewal_query, request)
+        logging.info(result);
         return result
     except HTTPException as ex:
         logging.error(f"HTTPException: {ex.detail}")
@@ -99,6 +100,7 @@ async def complete_transaction(request: CompleteTransactionRequest):
     logging.info("Received request to complete transaction")
     try:
         result = await run_in_thread(process_renewal_completion, request)
+        logging.info(result);
         return result
     except HTTPException as ex:
         logging.error(f"HTTPException: {ex.detail}")
