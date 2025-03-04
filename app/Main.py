@@ -33,8 +33,18 @@ def process_renewal_query(request: QueryPriceRequest):
         if alert:
             raise HTTPException(status_code=400, detail=f"{alert}")
         
+        current_page = renewal_service.check_current_page()
+        logging.info(f"current page {current_page}")
+
+
+        if current_page == "price_page":
+            logging.info("got price early")
+            return renewal_service.collect_form_data()
+
         renewal_service.fill_form_page()
+
         renewal_service.county_selection_element()
+
         fee_summary = renewal_service.collect_form_data()
         
         if fee_summary:

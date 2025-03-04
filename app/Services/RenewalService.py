@@ -68,7 +68,6 @@ class RenewalService:
             try:
                 shelby_address_verify = self.driver.find_element(By.CSS_SELECTOR, "#shelby_address_verify")
                 self.driver.execute_script("arguments[0].click();", shelby_address_verify)
-                time.sleep(2)
                 form_fields["confirmEmail"] = self.form_data.email #confirm email needed on shelby address verify
                 logging.info(f"{self.get_log_prefix()} Shelby address verified successfully")
             except Exception as e:
@@ -118,6 +117,7 @@ class RenewalService:
             try:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
                 if attempt < 3:
+                    self.save_screenshot()
                     logging.info(f"{self.get_log_prefix()} Validation error found, retrying form submission")
                     self.retry_form_submission(attempt)
                 else:
@@ -215,7 +215,7 @@ class RenewalService:
 
     def collect_form_data(self):
         logging.info(f"{self.get_log_prefix()} Collecting form data")
-
+        self.save_screenshot()
         try:
             fee_summary = {
                 "County": self.get_element_text_or_default(".row > .col-md-2:nth-child(2) div:nth-child(2)"),
@@ -314,14 +314,21 @@ class RenewalService:
         logging.info(f"{self.get_log_prefix()} Payment processed successfully")
 
     def check_current_page(self):
+        self.save_screenshot()
         logging.info(f"{self.get_log_prefix()} Checking current page: {self.driver.current_url}")
         try:
             normalized_url = self.driver.current_url.replace('//', '/')
             if 'renewalconfirm' in normalized_url:
                 return "successful_payment"
+            if 'expresspay=Y' in normalized_url:
+                return "fee_page"
             street_input = self.driver.find_elements(By.CSS_SELECTOR, "#streetnum")
             if street_input:
                 return "street_number_page"
+            if self.driver.find_elements(By.CSS_SELECTOR, "#name"):
+                return "form_page"
+            if self.driver.find_element(By.CSS_SELECTOR, "#Total\\ Display"):
+                return "price_page"
             return "form_page"
         except Exception as e:
 
@@ -346,11 +353,11 @@ class RenewalService:
                 pass 
 
 
-            plate_input = self.driver.find_element(By.CSS_SELECTOR, "#plateFields > div > input[name='platenum']")
+            plate_input = self.driver.find_element(By.CSS_SELECTOR, "input[name='platenum']")
             plate_input.send_keys(self.form_data.plateNumber)
 
-            search_button = self.driver.find_element(By.ID, "Searchbutton")
-            self.driver.execute_script("arguments[0].click();", search_button)
+            form = self.driver.find_element(By.CSS_SELECTOR, "#renewalSearchForm")
+            self.driver.execute_script("arguments[0].submit();", form)
             
             alert_text = self.handle_alert()
             
@@ -376,7 +383,23 @@ class RenewalService:
             random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + random_chars
             screenshot_path = os.path.join(folder_path, f"screenshot_{timestamp}.png")
+            
+            # Get original window size
+            original_size = self.driver.get_window_size()
+            
+            # Get the total height of the page
+            total_height = self.driver.execute_script("return document.body.parentNode.scrollHeight")
+            total_width = self.driver.execute_script("return document.body.parentNode.scrollWidth")
+            
+            # Set window size to capture everything
+            self.driver.set_window_size(total_width, total_height)
+            
+            # Take the screenshot
             self.driver.save_screenshot(screenshot_path)
-            logging.info(f"{self.get_log_prefix()} Screenshot saved at {screenshot_path}")
+            
+            # Restore original window size
+            self.driver.set_window_size(original_size['width'], original_size['height'])
+            
+            logging.info(f"{self.get_log_prefix()} Full page screenshot saved at {screenshot_path}")
         except Exception as e:
             logging.error(f"{self.get_log_prefix()} Failed to save screenshot: {e}")
