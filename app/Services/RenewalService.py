@@ -258,7 +258,7 @@ class RenewalService:
             pop_ok_button.click()
             
             try:
-                check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit"))
+                check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit, #acceptTerms_credit"))
 
                 check_terms_condition.click()
             except Exception as e:
@@ -278,7 +278,7 @@ class RenewalService:
 
 
             
-            check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit"))
+            check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit, #acceptTerms_credit"))
             self.driver.execute_script("arguments[0].click();", check_terms_condition)
 
 
