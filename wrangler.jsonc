@@ -1,0 +1,37 @@
+{
+  "name": "vehicle-renewal-service",
+  "account_id": "ae73421d2ffafbbf5251ad51a4d5fa9b",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-25",
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "pattern": "vrs.renewmytags.com/*",
+      "zone_id": "11320d319e3c519a5548bc13fee11ac2"
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "VehicleRenewalContainer",
+      "image": "./Dockerfile",
+      "instance_type": "standard-1",
+      "max_instances": 5
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "VEHICLE_RENEWAL",
+        "class_name": "VehicleRenewalContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["VehicleRenewalContainer"]
+    }
+  ]
+}

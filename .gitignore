@@ -5,3 +5,5 @@ __pycache__
 .idea
 .aws-sam
 app/screenshots/
+node_modules/
+.wrangler/
