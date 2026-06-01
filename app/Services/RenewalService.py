@@ -10,9 +10,6 @@ from Models.QueryPriceRequest import QueryPriceRequest
 from Models.CompleteTransactionRequest import CompleteTransactionRequest
 import time
 import os
-from datetime import datetime
-import random
-import string
 
 
 class RenewalService:
@@ -117,7 +114,6 @@ class RenewalService:
             try:
                 validation_error = self.driver.find_element(By.CSS_SELECTOR, "div.swal2-header")
                 if attempt < 3:
-                    self.save_screenshot()
                     logging.info(f"{self.get_log_prefix()} Validation error found, retrying form submission")
                     self.retry_form_submission(attempt)
                 else:
@@ -215,8 +211,10 @@ class RenewalService:
 
     def collect_form_data(self):
         logging.info(f"{self.get_log_prefix()} Collecting form data")
-        self.save_screenshot()
         try:
+            WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#Total\\ Display"))
+            )
             fee_summary = {
                 "County": self.get_element_text_or_default(".row > .col-md-2:nth-child(2) div:nth-child(2)"),
                 "License": self.get_element_text_or_default(".row > .col-md-2:nth-child(3) div:nth-child(2)"),
@@ -224,21 +222,20 @@ class RenewalService:
                 "Make": self.get_element_text_or_default(".row > .col-md-2:nth-child(4) div:nth-child(2)"),
                 "Year": self.get_element_text_or_default(".row > .col-md-2:nth-child(5) div:nth-child(2)"),
                 "Exp Date": self.get_element_text_or_default(".row > .col-md-2:nth-child(6) div:nth-child(2)"),
-                
-                "Registration": self.driver.find_element(By.CSS_SELECTOR, "#Registration\\ Display").text.replace("$", ""),
+
+                "Registration": self.get_element_text_or_default("#Registration\\ Display").replace("$", ""),
                 "Online Fee": self.get_element_text_or_default("#Online\\ Fee\\ Display").replace("$", ""),
                 "Organ Donor Amount": self.get_element_text_or_default("#Organ\\ Donor\\ Amount\\ Display").replace("$", ""),
                 "County Wheel Tax": self.get_element_text_or_default("#County\\ Wheel\\ Tax\\ Display").replace("$", ""),
                 "City Wheel Tax": self.get_element_text_or_default("#City\\ Wheel\\ Tax\\ Display").replace("$", ""),
-                "Mail Fee": self.driver.find_element(By.CSS_SELECTOR, "#Mail\\ Fee\\ Display").text.replace("$", ""),
-                "Subtotal": self.driver.find_element(By.CSS_SELECTOR, "#Subtotal\\ Display").text.replace("$", ""),
-                "Processing Fee": self.driver.find_element(By.CSS_SELECTOR, "#Processing\\ Fee\\ Display").text.replace("$", ""),
-                "Total": self.driver.find_element(By.CSS_SELECTOR, "#Total\\ Display").text.replace("$", "")
+                "Mail Fee": self.get_element_text_or_default("#Mail\\ Fee\\ Display").replace("$", ""),
+                "Subtotal": self.get_element_text_or_default("#Subtotal\\ Display").replace("$", ""),
+                "Processing Fee": self.get_element_text_or_default("#Processing\\ Fee\\ Display").replace("$", ""),
+                "Total": self.get_element_text_or_default("#Total\\ Display").replace("$", "")
             }
             return fee_summary
         except Exception as e:
-            print(f"Found an exception {e}")
-            pass
+            self._dump_debug_state("collect_form_data", e)
             return None
 
         logging.info(f"{self.get_log_prefix()} Form data collected successfully")
@@ -250,6 +247,23 @@ class RenewalService:
             return self.driver.find_element(By.CSS_SELECTOR, css_selector).text
         except Exception:
             return default_value
+
+    def _dump_debug_state(self, label, error):
+        try:
+            ts = int(time.time())
+            plate = getattr(self.form_data, "plateNumber", "noplate")
+            base = os.path.join(os.path.dirname(__file__), "..", "screenshots")
+            os.makedirs(base, exist_ok=True)
+            stem = os.path.join(base, f"{ts}_{plate}_{label}")
+            self.driver.save_screenshot(f"{stem}.png")
+            with open(f"{stem}.html", "w") as f:
+                f.write(self.driver.page_source)
+            logging.error(
+                f"{self.get_log_prefix()} {label} failed at url={self.driver.current_url} "
+                f"title={self.driver.title!r} err={error} dump={stem}.png/.html"
+            )
+        except Exception as dump_err:
+            logging.error(f"{self.get_log_prefix()} debug dump failed: {dump_err}")
 
     def pop_up_in_payment_processing(self):
         logging.info(f"{self.get_log_prefix()} Handling pop-up in payment processing")
@@ -307,14 +321,16 @@ class RenewalService:
              
             return fee_summary  # Return fee summary after payment
         except Exception as e:
-            raise f"Error in Payment Process {e}"
+            raise Exception(f"Error in Payment Process {e}")
         finally:
             self.driver.switch_to.default_content()
 
         logging.info(f"{self.get_log_prefix()} Payment processed successfully")
 
+    def has_shelby_address_verify(self):
+        return bool(self.driver.find_elements(By.CSS_SELECTOR, "#shelby_address_verify"))
+
     def check_current_page(self):
-        self.save_screenshot()
         logging.info(f"{self.get_log_prefix()} Checking current page: {self.driver.current_url}")
         try:
             normalized_url = self.driver.current_url.replace('//', '/')
@@ -373,33 +389,3 @@ class RenewalService:
 
         logging.info(f"{self.get_log_prefix()} Street number page filled successfully")
         
-    def save_screenshot(self):
-        logging.info(f"{self.get_log_prefix()} Saving screenshot")
-        try:
-            # Create a folder based on the plate number
-            folder_path = os.path.join(os.getcwd(), f"screenshots/{self.form_data.plateNumber}")
-            os.makedirs(folder_path, exist_ok=True)
-
-            random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + random_chars
-            screenshot_path = os.path.join(folder_path, f"screenshot_{timestamp}.png")
-            
-            # Get original window size
-            original_size = self.driver.get_window_size()
-            
-            # Get the total height of the page
-            total_height = self.driver.execute_script("return document.body.parentNode.scrollHeight")
-            total_width = self.driver.execute_script("return document.body.parentNode.scrollWidth")
-            
-            # Set window size to capture everything
-            self.driver.set_window_size(total_width, total_height)
-            
-            # Take the screenshot
-            self.driver.save_screenshot(screenshot_path)
-            
-            # Restore original window size
-            self.driver.set_window_size(original_size['width'], original_size['height'])
-            
-            logging.info(f"{self.get_log_prefix()} Full page screenshot saved at {screenshot_path}")
-        except Exception as e:
-            logging.error(f"{self.get_log_prefix()} Failed to save screenshot: {e}")

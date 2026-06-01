@@ -37,7 +37,7 @@ def process_renewal_query(request: QueryPriceRequest):
         logging.info(f"current page {current_page}")
 
 
-        if current_page == "price_page":
+        if current_page == "price_page" or renewal_service.has_shelby_address_verify():
             logging.info("got price early")
             return renewal_service.collect_form_data()
 
@@ -64,22 +64,18 @@ def process_renewal_completion(request: CompleteTransactionRequest):
         renewal_service.driver.get(renewal_service_url)
         
         renewal_service.beginning_county_selection()
-        renewal_service.save_screenshot()
-        
+
         alert = renewal_service.fill_street_number_page()
         if alert:
             raise HTTPException(status_code=400, detail=f"{alert}")
         
         renewal_service.fill_form_page()
         renewal_service.county_selection_element()
-        renewal_service.save_screenshot()
         fee_summary = renewal_service.collect_form_data()
-        renewal_service.save_screenshot()
 
         payment_process = renewal_service.handle_payment_processing()
-        
+
         current_page = renewal_service.check_current_page()
-        renewal_service.save_screenshot()
         
         if current_page != "successful_payment":
             raise HTTPException(status_code=500, detail="Payment processing failed")
