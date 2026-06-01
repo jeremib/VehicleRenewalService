@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.chrome.options import Options
 from Models.QueryPriceRequest import QueryPriceRequest
 from Models.CompleteTransactionRequest import CompleteTransactionRequest
+from Services.AddressService import is_in_city_limits
 import time
 import os
 
@@ -215,6 +216,7 @@ class RenewalService:
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "#Total\\ Display"))
             )
+            self.apply_hamilton_city_qty()
             fee_summary = {
                 "County": self.get_element_text_or_default(".row > .col-md-2:nth-child(2) div:nth-child(2)"),
                 "License": self.get_element_text_or_default(".row > .col-md-2:nth-child(3) div:nth-child(2)"),
@@ -239,6 +241,32 @@ class RenewalService:
             return None
 
         logging.info(f"{self.get_log_prefix()} Form data collected successfully")
+
+    def apply_hamilton_city_qty(self):
+        if (self.form_data.county or "").strip().lower() != "hamilton":
+            return
+        full_address = (
+            f"{self.form_data.addressTwo}, {self.form_data.city}, "
+            f"{self.form_data.state} {self.form_data.zip}"
+        )
+        in_limits = is_in_city_limits(full_address)
+        if not in_limits:
+            logging.info(
+                f"{self.get_log_prefix()} Hamilton county, in_limits={in_limits} — leaving MVCityQty alone"
+            )
+            return
+        try:
+            el = self.driver.find_element(By.ID, "MVCityQty")
+            self.driver.execute_script(
+                "arguments[0].value = '1'; "
+                "arguments[0].dispatchEvent(new Event('change', {bubbles: true})); "
+                "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+                el,
+            )
+            time.sleep(1)
+            logging.info(f"{self.get_log_prefix()} Set MVCityQty=1 (Hamilton, in city limits)")
+        except Exception as e:
+            logging.error(f"{self.get_log_prefix()} Failed to set MVCityQty: {e}")
 
     def get_element_text_or_default(self, css_selector, default_value=""):
         logging.info(f"{self.get_log_prefix()} Getting text for element: {css_selector}")
