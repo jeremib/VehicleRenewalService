@@ -235,7 +235,7 @@ class RenewalService:
             }
             return fee_summary
         except Exception as e:
-            self._dump_debug_state("collect_form_data", e)
+            logging.error(f"{self.get_log_prefix()} collect_form_data failed: {e}")
             return None
 
         logging.info(f"{self.get_log_prefix()} Form data collected successfully")
@@ -248,23 +248,6 @@ class RenewalService:
         except Exception:
             return default_value
 
-    def _dump_debug_state(self, label, error):
-        try:
-            ts = int(time.time())
-            plate = getattr(self.form_data, "plateNumber", "noplate")
-            base = os.path.join(os.path.dirname(__file__), "..", "screenshots")
-            os.makedirs(base, exist_ok=True)
-            stem = os.path.join(base, f"{ts}_{plate}_{label}")
-            self.driver.save_screenshot(f"{stem}.png")
-            with open(f"{stem}.html", "w") as f:
-                f.write(self.driver.page_source)
-            logging.error(
-                f"{self.get_log_prefix()} {label} failed at url={self.driver.current_url} "
-                f"title={self.driver.title!r} err={error} dump={stem}.png/.html"
-            )
-        except Exception as dump_err:
-            logging.error(f"{self.get_log_prefix()} debug dump failed: {dump_err}")
-
     def pop_up_in_payment_processing(self):
         logging.info(f"{self.get_log_prefix()} Handling pop-up in payment processing")
                                 
@@ -275,7 +258,7 @@ class RenewalService:
             pop_ok_button.click()
             
             try:
-                check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptTerms_credit"))
+                check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit"))
 
                 check_terms_condition.click()
             except Exception as e:
@@ -295,7 +278,7 @@ class RenewalService:
 
 
             
-            check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptTerms_credit"))
+            check_terms_condition=self.wait_for_element((By.CSS_SELECTOR,"#acceptPaymentTerms_credit"))
             self.driver.execute_script("arguments[0].click();", check_terms_condition)
 
 
